@@ -33,11 +33,12 @@ use stdClass;
 abstract class manipulator_candidates_base implements manipulator_candidates {
     /**
      * Query name for logging, defined in each concrete subclass.
-     * Declared here to satisfy static analysis.
+     * Declared here to satisfy static analysis. Must NOT have a type hint
+     * because subclasses redeclare it without one (PHP requires consistency).
      *
      * @var string
      */
-    protected string $queryname = '';
+    protected $queryname = '';
 
     /** @var stdClass $config */
     protected $config;

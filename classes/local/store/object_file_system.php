@@ -902,6 +902,14 @@ abstract class object_file_system extends \file_system_filedir {
      * @throws \dml_exception
      */
     public function redirect_to_presigned_url($contenthash, $headers = []) {
+        // Hard stop: never generate a presigned URL redirect for files belonging to
+        // excluded components (e.g. mod_scorm). This guard catches every possible
+        // call path — xsendfile_file(), xsendfile(), or any future caller — so
+        // SCORM content is always served directly from local disk.
+        if ($this->contenthash_has_excluded_component($contenthash)) {
+            return false;
+        }
+
         global $FULLME;
         try {
             $signedurl = $this->externalclient->generate_presigned_url($contenthash, $headers);

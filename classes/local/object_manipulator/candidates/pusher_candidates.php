@@ -45,7 +45,8 @@ class pusher_candidates extends manipulator_candidates_base {
                  WHERE filesize > :threshold
                    AND filesize < :maximum_file_size
                    AND timeduplicated <= :maxcreatedtimestamp
-                   AND location = :object_location';
+                   AND location = :object_location'
+               . $this->get_component_exclusion_sql();
     }
 
     /**
@@ -54,11 +55,14 @@ class pusher_candidates extends manipulator_candidates_base {
      */
     public function get_candidates_sql_params() {
         $filesystem = new $this->config->filesystem();
-        return [
-            'maxcreatedtimestamp' => time() - $this->config->minimumage,
-            'threshold' => $this->config->sizethreshold,
-            'maximum_file_size' => $filesystem->get_maximum_upload_filesize(),
-            'object_location' => OBJECT_LOCATION_LOCAL,
-        ];
+        return array_merge(
+            [
+                'maxcreatedtimestamp' => time() - $this->config->minimumage,
+                'threshold'           => $this->config->sizethreshold,
+                'maximum_file_size'   => $filesystem->get_maximum_upload_filesize(),
+                'object_location'     => OBJECT_LOCATION_LOCAL,
+            ],
+            $this->get_component_exclusion_params()
+        );
     }
 }

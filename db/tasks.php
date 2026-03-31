@@ -119,4 +119,18 @@ $tasks = [
         'dayofweek' => '*',
         'month'     => '*',
     ],
+    [
+        // One-time migration task: pulls back to local disk any files belonging to
+        // excluded components that were already pushed to remote storage before the
+        // 'excludedcomponents' setting was configured.
+        // Enable manually, run once, then disable again (or keep enabled as a daily net).
+        'classname' => 'tool_objectfs\task\pull_excluded_objects_task',
+        'blocking'  => 0,
+        'minute'    => '0',
+        'hour'      => '3',
+        'day'       => '*',
+        'dayofweek' => '*',
+        'month'     => '*',
+        'disabled'  => true,
+    ],
 ];

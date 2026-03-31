@@ -164,6 +164,22 @@ if ($ADMIN->fulltree) {
     ));
 
     $settings->add(new admin_setting_heading(
+        'tool_objectfs/excludedcomponentsheading',
+        new lang_string('settings:excludedcomponents:heading', 'tool_objectfs'),
+        new lang_string('settings:excludedcomponents:heading_desc', 'tool_objectfs')
+    ));
+
+    $settings->add(new admin_setting_configtextarea(
+        'tool_objectfs/excludedcomponents',
+        new lang_string('settings:excludedcomponents', 'tool_objectfs'),
+        new lang_string('settings:excludedcomponents_help', 'tool_objectfs'),
+        'mod_scorm',
+        PARAM_TEXT,
+        60,
+        6
+    ));
+
+    $settings->add(new admin_setting_heading(
         'tool_objectfs/filetransfersettings',
         new lang_string('settings:filetransferheader', 'tool_objectfs'),
         ''

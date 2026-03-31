@@ -35,7 +35,7 @@ class deleter_candidates extends manipulator_candidates_base {
     protected $queryname = 'get_delete_candidates';
 
     /**
-     * get_candiates_sql
+     * get_candidates_sql
      * @return string
      */
     public function get_candidates_sql() {
@@ -44,19 +44,22 @@ class deleter_candidates extends manipulator_candidates_base {
                   FROM {tool_objectfs_objects}
                  WHERE timeduplicated <= :consistancythreshold
                    AND location = :location
-                   AND filesize > :sizethreshold';
+                   AND filesize > :sizethreshold'
+               . $this->get_component_exclusion_sql();
     }
 
     /**
-     * get_candiates_sql_params
+     * get_candidates_sql_params
      * @return array
      */
     public function get_candidates_sql_params() {
-        $consistancythreshold = time() - $this->config->consistencydelay;
-        return [
-            'consistancythreshold' => $consistancythreshold,
-            'location' => OBJECT_LOCATION_DUPLICATED,
-            'sizethreshold' => $this->config->sizethreshold,
-        ];
+        return array_merge(
+            [
+                'consistancythreshold' => time() - $this->config->consistencydelay,
+                'location'             => OBJECT_LOCATION_DUPLICATED,
+                'sizethreshold'        => $this->config->sizethreshold,
+            ],
+            $this->get_component_exclusion_params()
+        );
     }
 }

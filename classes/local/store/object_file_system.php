@@ -130,6 +130,42 @@ abstract class object_file_system extends \file_system_filedir {
      */
     abstract protected function initialise_external_client($config);
 
+    // -------------------------------------------------------------------------
+    // Component exclusion helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns true if the given Moodle component is excluded from ObjectFS management.
+     *
+     * Excluded components are configured via tool_objectfs / excludedcomponents.
+     * Their files are never pushed to remote storage, never have their local copy
+     * deleted, and are always served from local disk regardless of preferexternal
+     * or presigned URL settings.
+     *
+     * This is the fast in-memory path: zero DB queries.
+     *
+     * @param string $component e.g. 'mod_scorm'
+     * @return bool
+     */
+    protected function is_component_excluded(string $component): bool {
+        return \tool_objectfs\local\store\component_filter::is_component_excluded($component);
+    }
+
+    /**
+     * Returns true if ANY file record for the given contenthash belongs to an
+     * excluded component.
+     *
+     * Used as a safety guard in push/delete operations where only the contenthash
+     * is known (no stored_file object). Results are cached per-request/process
+     * inside component_filter to avoid N DB queries during batch operations.
+     *
+     * @param string $contenthash SHA-1 content hash
+     * @return bool
+     */
+    protected function contenthash_has_excluded_component(string $contenthash): bool {
+        return \tool_objectfs\local\store\component_filter::contenthash_has_excluded_component($contenthash);
+    }
+
     /**
      * Get the full path for the specified hash, including the path to the filedir.
      *
@@ -189,11 +225,20 @@ abstract class object_file_system extends \file_system_filedir {
 
     /**
      * get_remote_path_from_storedfile
-     * @param \stored_file $file
      *
+     * For excluded components, always returns a local filesystem path, bypassing
+     * S3/Azure stream paths and the preferexternal flag. If the file is missing
+     * locally (e.g. it was pushed to remote before the exclusion was configured),
+     * get_local_path_from_hash(true) will transparently pull it back first.
+     *
+     * @param \stored_file $file
      * @return string
      */
     public function get_remote_path_from_storedfile(\stored_file $file) {
+        if ($this->is_component_excluded($file->get_component())) {
+            // fetchifnotfound=true: auto-recover from remote on first access if needed.
+            return $this->get_local_path_from_hash($file->get_contenthash(), true);
+        }
         return $this->get_remote_path_from_hash($file->get_contenthash());
     }
 
@@ -365,12 +410,29 @@ abstract class object_file_system extends \file_system_filedir {
 
     /**
      * copy_object_from_local_to_external_by_hash
+     *
+     * Safety guard: skips the push entirely when the contenthash belongs to an
+     * excluded component. The candidates SQL exclusion already prevents these
+     * from being selected in the first place; this guard ensures correctness
+     * even if the method is called directly.
+     *
      * @param mixed $contenthash
      * @param int $objectsize
      *
-     * @return int
+     * @return int OBJECT_LOCATION_*
      */
     public function copy_object_from_local_to_external_by_hash($contenthash, $objectsize = 0) {
+        if ($this->contenthash_has_excluded_component($contenthash)) {
+            $this->logger->log_object_move(
+                'copy_object_from_local_to_external',
+                OBJECT_LOCATION_LOCAL,
+                OBJECT_LOCATION_LOCAL,
+                $contenthash,
+                $objectsize
+            );
+            return OBJECT_LOCATION_LOCAL;
+        }
+
         $initiallocation = $this->get_object_location_from_hash($contenthash);
 
         $finallocation = $initiallocation;
@@ -413,12 +475,31 @@ abstract class object_file_system extends \file_system_filedir {
 
     /**
      * delete_object_from_local_by_hash
+     *
+     * Safety guard: refuses to delete the local copy for files belonging to
+     * excluded components. Returns OBJECT_LOCATION_LOCAL so the DB record stays
+     * unchanged and the file is never left without a local copy.
+     *
+     * The candidates SQL exclusion already prevents these from being selected
+     * by the delete_local_objects task; this guard covers direct calls.
+     *
      * @param mixed $contenthash
      * @param int $objectsize
      *
-     * @return int
+     * @return int OBJECT_LOCATION_*
      */
     public function delete_object_from_local_by_hash($contenthash, $objectsize = 0) {
+        if ($this->contenthash_has_excluded_component($contenthash)) {
+            $this->logger->log_object_move(
+                'delete_local_object',
+                OBJECT_LOCATION_LOCAL,
+                OBJECT_LOCATION_LOCAL,
+                $contenthash,
+                $objectsize
+            );
+            return OBJECT_LOCATION_LOCAL;
+        }
+
         $initiallocation = $this->get_object_location_from_hash($contenthash);
         $finallocation = $initiallocation;
 
@@ -509,12 +590,21 @@ abstract class object_file_system extends \file_system_filedir {
      * This alternate method to xsendfile() allows an alternate file system
      * to use the full file metadata and avoid extra lookups.
      *
+     * For excluded components, returns false to prevent any presigned URL or
+     * proxy range redirect. Returning false causes Moodle to fall back to
+     * readfile(), which then goes through get_remote_path_from_storedfile()
+     * where the local-path override is already applied.
+     *
      * @param stored_file $file The file to send
      * @return bool success
      * @throws \dml_exception
      * @throws \coding_exception
      */
     public function xsendfile_file(stored_file $file): bool {
+        if ($this->is_component_excluded($file->get_component())) {
+            return false;
+        }
+
         if (!$this->is_configured()) {
             return parent::xsendfile_file($file);
         }

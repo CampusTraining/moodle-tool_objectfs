@@ -314,3 +314,10 @@ $string['tagsyncstatus:notrequired'] = 'Not required / synced';
 $string['task:reconcilefiledir'] = 'Reconcile the filedir';
 $string['task:triggerupdateobjecttags'] = 'Queue adhoc task to update object tags';
 $string['total_deleted_dirs'] = 'Total number of deleted directories: ';
+
+// Component exclusion settings.
+$string['settings:excludedcomponents:heading'] = 'Excluded components';
+$string['settings:excludedcomponents:heading_desc'] = 'Files belonging to the components listed below will <strong>never</strong> be pushed to remote object storage, will <strong>never</strong> have their local copy deleted, and will <strong>always</strong> be served from the local filesystem — regardless of other ObjectFS settings including <em>preferexternal</em> and presigned URLs. On first access, any excluded file that was already pushed to remote before this setting was configured will be automatically recovered to local disk.';
+$string['settings:excludedcomponents'] = 'Excluded Moodle components';
+$string['settings:excludedcomponents_help'] = 'Enter one Moodle component name per line (e.g. <code>mod_scorm</code>). Files whose <code>component</code> column in <code>mdl_files</code> matches any entry here are exempt from all ObjectFS file-management operations. Leave blank to apply ObjectFS to all files normally.';
+$string['task:pull_excluded_objects'] = 'Pull excluded component objects from remote storage (migration)';

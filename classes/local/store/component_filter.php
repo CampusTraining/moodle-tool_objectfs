@@ -84,7 +84,13 @@ class component_filter {
             return self::$excludedcomponents;
         }
 
-        $raw = (string) get_config('tool_objectfs', 'excludedcomponents');
+        // Use manager::get_objectfs_config() — NOT get_config() directly.
+        // The manager merges DB values over PHP defaults, so the default 'mod_scorm'
+        // is returned even if the admin has never saved the settings page (i.e. the
+        // key does not yet exist in mdl_config_plugins).
+        $config = \tool_objectfs\local\manager::get_objectfs_config();
+        $raw = (string) ($config->excludedcomponents ?? '');
+
         if (empty(trim($raw))) {
             self::$excludedcomponents = [];
             return self::$excludedcomponents;

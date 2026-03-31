@@ -641,6 +641,14 @@ abstract class object_file_system extends \file_system_filedir {
      * @throws \dml_exception
      */
     public function xsendfile($contenthash) {
+        // Unlike xsendfile_file(), this method only receives the contenthash — no
+        // stored_file object, so we cannot check the component directly.
+        // We do a cached DB lookup to prevent presigned URL redirects to S3 for
+        // files belonging to excluded components.
+        if ($this->contenthash_has_excluded_component($contenthash)) {
+            return false;
+        }
+
         if (!$this->is_configured()) {
             return parent::xsendfile($contenthash);
         }

@@ -220,5 +220,17 @@ function xmldb_tool_objectfs_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2024120600, 'tool', 'objectfs');
     }
 
+    if ($oldversion < 2026033101) {
+        // Seed the excludedcomponents setting with the default value ('mod_scorm') if it
+        // has never been saved before. This ensures component_filter works immediately
+        // after upgrade without requiring the admin to visit and save the settings page.
+        if (get_config('tool_objectfs', 'excludedcomponents') === false) {
+            set_config('excludedcomponents', 'mod_scorm', 'tool_objectfs');
+        }
+
+        // Objectfs savepoint reached.
+        upgrade_plugin_savepoint(true, 2026033101, 'tool', 'objectfs');
+    }
+
     return true;
 }

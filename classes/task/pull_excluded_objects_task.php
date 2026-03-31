@@ -66,7 +66,12 @@ class pull_excluded_objects_task extends scheduled_task {
      * @return void
      */
     public function execute() {
-        global $DB;
+        global $CFG, $DB;
+
+        // lib.php defines OBJECT_LOCATION_* constants; require it explicitly here
+        // because scheduled tasks do not always trigger the autoload that would
+        // otherwise pull it in via object_file_system.php.
+        require_once($CFG->dirroot . '/admin/tool/objectfs/lib.php');
 
         $config = manager::get_objectfs_config();
 

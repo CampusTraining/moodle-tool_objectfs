@@ -467,7 +467,12 @@ if ($ADMIN->fulltree) {
         ''
     ));
 
-    $settings->add(new admin_setting_check('tool_objectfs/check_connectionstatus', new connection(), true));
+    if (class_exists('admin_setting_check')) {
+        $settings->add(new admin_setting_check('tool_objectfs/check_connectionstatus', new connection(), true));
+    } else {
+        $summary = (new connection())->get_result()->get_summary();
+        $settings->add(new admin_setting_description('connectionstatuscheck', '', $summary));
+    }
 
     // Tagging status.
     $settings->add(new admin_setting_heading(

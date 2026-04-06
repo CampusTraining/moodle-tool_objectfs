@@ -73,8 +73,8 @@ class manager {
 
         // Component exclusion: newline-separated list of Moodle components whose files
         // should never be pushed to remote storage and must always be served locally.
-        // Default value excludes mod_scorm out of the box.
-        $config->excludedcomponents = 'mod_scorm';
+        // Default covers standard and custom SCORM components.
+        $config->excludedcomponents = "mod_scorm\nmod_scormv2\nlocal_sharedscorm";
 
         // S3 file system.
         $config->s3_usesdkcreds = 0;

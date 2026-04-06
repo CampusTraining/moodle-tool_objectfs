@@ -232,5 +232,17 @@ function xmldb_tool_objectfs_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026033102, 'tool', 'objectfs');
     }
 
+    if ($oldversion < 2026040600) {
+        // Extend excluded components to cover custom SCORM plugins (mod_scormv2,
+        // local_sharedscorm). Only update if the setting still holds the original
+        // single-value default; leave untouched if the admin has customised it.
+        $current = get_config('tool_objectfs', 'excludedcomponents');
+        if ($current === 'mod_scorm') {
+            set_config('excludedcomponents', "mod_scorm\nmod_scormv2\nlocal_sharedscorm", 'tool_objectfs');
+        }
+
+        upgrade_plugin_savepoint(true, 2026040600, 'tool', 'objectfs');
+    }
+
     return true;
 }

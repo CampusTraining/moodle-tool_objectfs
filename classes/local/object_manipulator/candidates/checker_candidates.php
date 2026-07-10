@@ -42,7 +42,7 @@ class checker_candidates extends manipulator_candidates_base {
         return 'SELECT f.contenthash
                   FROM {files} f
              LEFT JOIN {tool_objectfs_objects} o ON f.contenthash = o.contenthash
-                 WHERE f.filesize > 0
+                 WHERE f.contenthash <> :emptyhash
                    AND o.location is NULL
               GROUP BY f.contenthash';
     }
@@ -52,6 +52,13 @@ class checker_candidates extends manipulator_candidates_base {
      * @return array
      */
     public function get_candidates_sql_params() {
-        return [];
+        // sha1('') is the contenthash of the empty file. In Moodle's {files} table a row
+        // has filesize = 0 if and only if its contenthash is this value (directory/empty
+        // entries), so "contenthash <> :emptyhash" is exactly equivalent to the previous
+        // "filesize > 0" filter (verified against production data). Filtering on contenthash
+        // instead of filesize lets MySQL/MariaDB resolve the query index-only via the
+        // existing contenthash index, avoiding a per-row fetch of the filesize column
+        // (which previously read the whole {files} table and could take ~49s on large sites).
+        return ['emptyhash' => sha1('')];
     }
 }
